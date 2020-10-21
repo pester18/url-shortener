@@ -11,20 +11,55 @@ type reqBody struct {
 	Url string `json:"url" binding:"required"`
 }
 
-func NewRouter(r *gin.Engine, c controller.AppController) *gin.Engine {
+func NewRouter(c controller.AppController) http.Handler {
+	r := gin.New()
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 
 	r.GET("/:url_token", func(context *gin.Context) {
 		urlToken := context.Param("url_token")
 
-		c.RedirectToFullUrl(urlToken, context)
+		res := c.GetFullUrl(urlToken)
+
+		if !res.Success {
+			context.JSON(
+				http.StatusNotFound,
+				res,
+			)
+			return
+		}
+
+		redirectUrl, ok := res.Result.(string)
+		if ok {
+			context.Redirect(http.StatusFound, redirectUrl)
+			return
+		}
+
+		context.JSON(
+			http.StatusInternalServerError,
+			controller.Response{
+				Success: false,
+			},
+		)
 	})
 
 	r.DELETE("/:url_token", func(context *gin.Context) {
 		urlToken := context.Param("url_token")
 
-		c.DeleteShortUrl(urlToken, context)
+		res := c.DeleteShortUrl(urlToken)
+
+		if !res.Success {
+			context.JSON(
+				http.StatusNotFound,
+				res,
+			)
+			return
+		}
+
+		context.JSON(
+			http.StatusOK,
+			res,
+		)
 	})
 
 	r.POST("/shorten", func(context *gin.Context) {
@@ -32,14 +67,30 @@ func NewRouter(r *gin.Engine, c controller.AppController) *gin.Engine {
 
 		err := context.BindJSON(&req)
 		if err != nil {
-			context.String(
+			context.JSON(
 				http.StatusBadRequest,
-				err.Error(),
+				controller.Response{
+					Success: false,
+					Error:   err.Error(),
+				},
 			)
 			return
 		}
 
-		c.GenerateShortUrl(req.Url, context)
+		res := c.GenerateShortUrl(req.Url)
+
+		if !res.Success {
+			context.JSON(
+				http.StatusBadRequest,
+				res,
+			)
+			return
+		}
+
+		context.JSON(
+			http.StatusOK,
+			res,
+		)
 	})
 
 	return r

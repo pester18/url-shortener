@@ -5,7 +5,6 @@ import (
 
 	"github.com/pester18/url-shortener/entities"
 	"github.com/pester18/url-shortener/usecase/repository"
-	//"github.com/pester18/url-shortener/utils"
 )
 
 type interactor struct {

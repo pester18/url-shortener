@@ -1,13 +1,10 @@
 package main
 
 import (
-	//"encoding/json"
-
 	"fmt"
 	"log"
-	//"net/http"
+	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 
 	"github.com/pester18/url-shortener/config"
@@ -31,10 +28,13 @@ func main() {
 
 	reg := registry.NewRegistry(db)
 
-	r := gin.New()
-	r = router.NewRouter(r, reg.NewAppController())
+	r := router.NewRouter(reg.NewAppController())
+	srv := &http.Server{
+		Addr:    ":" + conf.Server.Port,
+		Handler: r,
+	}
 
-	if err := r.Run(":" + conf.Server.Port); err != nil {
+	if err := srv.ListenAndServe(); err != nil {
 		log.Fatalln(err)
 	}
 }

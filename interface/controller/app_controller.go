@@ -1,8 +1,6 @@
 package controller
 
 import (
-	"net/http"
-
 	"github.com/pester18/url-shortener/entities"
 	"github.com/pester18/url-shortener/usecase/interactor"
 )
@@ -12,79 +10,70 @@ type appController struct {
 }
 
 type AppController interface {
-	GenerateShortUrl(url string, c Context)
-	RedirectToFullUrl(urlToken string, c Context)
-	DeleteShortUrl(urlToken string, c Context)
+	GenerateShortUrl(url string) Response
+	GetFullUrl(urlToken string) Response
+	DeleteShortUrl(urlToken string) Response
 }
 
-type response struct {
-	Success bool `json:"success"`
-	Error string `json:"error,omitempty"`
+type Response struct {
+	Success bool        `json:"success"`
+	Error   string      `json:"error,omitempty"`
+	Result  interface{} `json:"result,omitempty"`
 }
-
 
 func NewAppController(interact interactor.Interactor) AppController {
 	return &appController{interact}
 }
 
-func (ac *appController) GenerateShortUrl(url string, c Context) {
+func (ac *appController) GenerateShortUrl(url string) Response {
 	shortenedUrlToCreate := &entities.ShortenedURL{URL: url}
 
-	res, err := ac.interact.CreateShortenedUrl(shortenedUrlToCreate)
+	shortenedUrl, err := ac.interact.CreateShortenedUrl(shortenedUrlToCreate)
 
 	if err != nil {
-		c.JSON(
-			http.StatusInternalServerError,
-			response{
-				Success: false,
-				Error: err.Error(),
-			},
-		)
-		return
+		return Response{
+			Success: false,
+			Error:   err.Error(),
+		}
 	}
 
-	c.JSON(http.StatusOK, res)
+	return Response{
+		Success: true,
+		Result:  shortenedUrl,
+	}
 }
 
-func (ac *appController) RedirectToFullUrl(urlToken string, c Context) {
+func (ac *appController) GetFullUrl(urlToken string) Response {
 	shortenedUrlToFind := &entities.ShortenedURL{URLtoken: urlToken}
 
-	res, err := ac.interact.GetShortenedUrlOrigin(shortenedUrlToFind)
+	shortenedUrl, err := ac.interact.GetShortenedUrlOrigin(shortenedUrlToFind)
 
 	if err != nil {
-		c.JSON(
-			http.StatusNotFound,
-			response{
-				Success: false,
-				Error: err.Error(),
-			},
-		)
-		return
+		return Response{
+			Success: false,
+			Error:   err.Error(),
+		}
 	}
 
-	c.Redirect(http.StatusFound, res.URL)
+	return Response{
+		Success: true,
+		Result:  shortenedUrl.URL,
+	}
 }
 
-func (ac *appController) DeleteShortUrl(urlToken string, c Context) {
+func (ac *appController) DeleteShortUrl(urlToken string) Response {
 	shortenedUrlToDelete := &entities.ShortenedURL{URLtoken: urlToken}
 
 	err := ac.interact.RemoveShortenedUrl(shortenedUrlToDelete)
 
 	if err != nil {
-		c.JSON(
-			http.StatusNotFound,
-			response{
-				Success: false,
-				Error: err.Error(),
-			},
-		)
-		return
+		return Response{
+			Success: false,
+			Error:   err.Error(),
+		}
 	}
 
-	c.JSON(
-		http.StatusOK,
-		response{
-			Success: true,
-		},
-	)
+	return Response{
+		Success: true,
+	}
 }

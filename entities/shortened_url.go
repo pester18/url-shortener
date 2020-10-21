@@ -10,7 +10,7 @@ type ShortenedURL struct {
 func CreateShortenedUrl(url string) *ShortenedURL {
 	token := shortuuid.New()
 	return &ShortenedURL{
-		URL: url,
+		URL:      url,
 		URLtoken: token,
 	}
 }
