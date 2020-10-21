@@ -15,7 +15,7 @@ type repository struct {
 type Repository interface {
 	FindShortenedUrl(shortenedUrl *entities.ShortenedURL) (*entities.ShortenedURL, error)
 	SaveShortenedUrl(shortenedUrl *entities.ShortenedURL) error
-	// FindAllUrls() ([]*entities.ShortenedURL, error)
+	DeleteShortenedUrl(shortenedUrl *entities.ShortenedURL) error
 }
 
 func NewRepository(db *mgo.Database) Repository {
@@ -47,6 +47,18 @@ func (r *repository) SaveShortenedUrl(shortenedUrl *entities.ShortenedURL) error
 	collection := r.db.C(shortenedUrl.CollectionName())
 
 	err := collection.Insert(shortenedUrl)
+
+	return err
+}
+
+func (r *repository) DeleteShortenedUrl(shortenedUrl *entities.ShortenedURL) error {
+	if shortenedUrl == nil {
+		return fmt.Errorf("Error: no shortened url provided")
+	}
+
+	collection := r.db.C(shortenedUrl.CollectionName())
+
+	err := collection.Remove(bson.M{"url_token": shortenedUrl.URLtoken})
 
 	return err
 }

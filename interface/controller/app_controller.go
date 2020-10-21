@@ -13,12 +13,15 @@ type appController struct {
 
 type AppController interface {
 	GenerateShortUrl(url string, c Context)
-	RedirectToFullUrl(url_token string, c Context)
+	RedirectToFullUrl(urlToken string, c Context)
+	DeleteShortUrl(urlToken string, c Context)
 }
 
-type failureResponse struct {
-	Error string
+type response struct {
+	Success bool `json:"success"`
+	Error string `json:"error,omitempty"`
 }
+
 
 func NewAppController(interact interactor.Interactor) AppController {
 	return &appController{interact}
@@ -32,7 +35,8 @@ func (ac *appController) GenerateShortUrl(url string, c Context) {
 	if err != nil {
 		c.JSON(
 			http.StatusInternalServerError,
-			failureResponse{
+			response{
+				Success: false,
 				Error: err.Error(),
 			},
 		)
@@ -42,15 +46,16 @@ func (ac *appController) GenerateShortUrl(url string, c Context) {
 	c.JSON(http.StatusOK, res)
 }
 
-func (ac *appController) RedirectToFullUrl(url_token string, c Context) {
-	shortenedUrlToFind := &entities.ShortenedURL{URLtoken: url_token}
+func (ac *appController) RedirectToFullUrl(urlToken string, c Context) {
+	shortenedUrlToFind := &entities.ShortenedURL{URLtoken: urlToken}
 
-	res, err := ac.interact.GetShortenedUrl(shortenedUrlToFind)
+	res, err := ac.interact.GetShortenedUrlOrigin(shortenedUrlToFind)
 
 	if err != nil {
 		c.JSON(
 			http.StatusNotFound,
-			failureResponse{
+			response{
+				Success: false,
 				Error: err.Error(),
 			},
 		)
@@ -58,4 +63,28 @@ func (ac *appController) RedirectToFullUrl(url_token string, c Context) {
 	}
 
 	c.Redirect(http.StatusFound, res.URL)
+}
+
+func (ac *appController) DeleteShortUrl(urlToken string, c Context) {
+	shortenedUrlToDelete := &entities.ShortenedURL{URLtoken: urlToken}
+
+	err := ac.interact.RemoveShortenedUrl(shortenedUrlToDelete)
+
+	if err != nil {
+		c.JSON(
+			http.StatusNotFound,
+			response{
+				Success: false,
+				Error: err.Error(),
+			},
+		)
+		return
+	}
+
+	c.JSON(
+		http.StatusOK,
+		response{
+			Success: true,
+		},
+	)
 }

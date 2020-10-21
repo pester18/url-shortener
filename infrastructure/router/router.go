@@ -1,37 +1,45 @@
 package router
 
 import (
-	//"encoding/json"
-
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pester18/url-shortener/interface/controller"
 )
 
+type reqBody struct {
+	Url string `json:"url" binding:"required"`
+}
+
 func NewRouter(r *gin.Engine, c controller.AppController) *gin.Engine {
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 
 	r.GET("/:url_token", func(context *gin.Context) {
-		url_token := context.Param("url_token")
+		urlToken := context.Param("url_token")
 
-		c.RedirectToFullUrl(url_token, context)
+		c.RedirectToFullUrl(urlToken, context)
+	})
+
+	r.DELETE("/:url_token", func(context *gin.Context) {
+		urlToken := context.Param("url_token")
+
+		c.DeleteShortUrl(urlToken, context)
 	})
 
 	r.POST("/shorten", func(context *gin.Context) {
-		var reqBody struct {
-			Url string
-		}
+		req := reqBody{}
 
-		err := context.BindJSON(&reqBody)
+		err := context.BindJSON(&req)
 		if err != nil {
 			context.String(
 				http.StatusBadRequest,
 				err.Error(),
 			)
+			return
 		}
-		c.GenerateShortUrl(reqBody.Url, context)
+
+		c.GenerateShortUrl(req.Url, context)
 	})
 
 	return r

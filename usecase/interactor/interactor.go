@@ -2,9 +2,10 @@ package interactor
 
 import (
 	"fmt"
+
 	"github.com/pester18/url-shortener/entities"
 	"github.com/pester18/url-shortener/usecase/repository"
-	"github.com/pester18/url-shortener/utils"
+	//"github.com/pester18/url-shortener/utils"
 )
 
 type interactor struct {
@@ -12,15 +13,16 @@ type interactor struct {
 }
 
 type Interactor interface {
-	GetShortenedUrl(shortenedUrlToFind *entities.ShortenedURL) (*entities.ShortenedURL, error)
+	GetShortenedUrlOrigin(shortenedUrlToFind *entities.ShortenedURL) (*entities.ShortenedURL, error)
 	CreateShortenedUrl(shortenedUrlToCreate *entities.ShortenedURL) (*entities.ShortenedURL, error)
+	RemoveShortenedUrl(shortenedUrlToDelete *entities.ShortenedURL) error
 }
 
 func NewInteractor(r repository.Repository) Interactor {
 	return &interactor{r}
 }
 
-func (i *interactor) GetShortenedUrl(shortenedUrlToFind *entities.ShortenedURL) (*entities.ShortenedURL, error) {
+func (i *interactor) GetShortenedUrlOrigin(shortenedUrlToFind *entities.ShortenedURL) (*entities.ShortenedURL, error) {
 	res, err := i.Repository.FindShortenedUrl(shortenedUrlToFind)
 	if err != nil {
 		return nil, err
@@ -34,14 +36,22 @@ func (i *interactor) GetShortenedUrl(shortenedUrlToFind *entities.ShortenedURL) 
 }
 
 func (i *interactor) CreateShortenedUrl(shortenedUrlToCreate *entities.ShortenedURL) (*entities.ShortenedURL, error) {
-	urlToken := utils.GenerateToken()
+	shortenedUrl := entities.CreateShortenedUrl(shortenedUrlToCreate.URL)
 
-	shortenedUrlToCreate.URLtoken = urlToken
-
-	err := i.Repository.SaveShortenedUrl(shortenedUrlToCreate)
+	err := i.Repository.SaveShortenedUrl(shortenedUrl)
 	if err != nil {
 		return nil, err
 	}
 
-	return shortenedUrlToCreate, nil
+	return shortenedUrl, nil
+}
+
+func (i *interactor) RemoveShortenedUrl(shortenedUrlToDelete *entities.ShortenedURL) error {
+	if shortenedUrlToDelete.URLtoken == "" {
+		return fmt.Errorf("No url token provided")
+	}
+
+	err := i.Repository.DeleteShortenedUrl(shortenedUrlToDelete)
+
+	return err
 }
